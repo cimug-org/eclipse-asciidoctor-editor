@@ -17,6 +17,9 @@ package de.jcup.asciidoctoreditor;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -124,7 +127,32 @@ public class AsciiDoctorEditorPDFLauncher {
                 return;
             }
             AsciiDoctorEditorUtil.openFileInExternalBrowser(file);
-
+            
+            String tempDir = data.getTempDirectory();
+            if (!tempDir.isBlank()) {
+            	File directory = new File(tempDir);
+            	
+            	if (directory.exists()) {
+            		deleteDir(directory); // Comment this out to prevent deleting of the temp folder (for debugging)
+            	}
+            }
+        }
+        
+        /**
+         * Recursively delete all files and contents in a given directory
+         * then delete the directory itself
+         * @param file
+         */
+        void deleteDir(File file) {
+            File[] contents = file.listFiles();
+            if (contents != null) {
+                for (File f : contents) {
+                    if (!Files.isSymbolicLink(f.toPath())) {
+                        deleteDir(f);
+                    }
+                }
+            }
+            file.delete();
         }
 
         private class PDFConvertJob extends Job {
@@ -138,6 +166,7 @@ public class AsciiDoctorEditorPDFLauncher {
             @Override
             protected IStatus run(IProgressMonitor monitor) {
                 try {
+                	preprocess(data, monitor);
                     pdfSupport.convertPDF(data, monitor);
                     done = true;
                     return Status.OK_STATUS;
@@ -145,6 +174,28 @@ public class AsciiDoctorEditorPDFLauncher {
                     done = true;
                     failed = e;
                     return new Status(Status.ERROR, AsciiDoctorEditorActivator.PLUGIN_ID, "Was not able to create/show PDF", e);
+                }
+            }
+            
+            // Before processing, convert all latex to svg
+            private void preprocess(ConversionData data, IProgressMonitor monitor) throws Exception
+            {
+            	LatexPDFPreprocessor latexPDF = new LatexPDFPreprocessor(data.getAsciiDocFile().getAbsolutePath());
+            	try {
+            		LatexConversionData conversionResult = latexPDF.run();
+            		java.nio.file.Path file = Paths.get(conversionResult.GetFile());
+            		
+            		 if (file != null && Files.exists(file)) {
+            			 File newFile = file.toFile();
+                         data.setAsciiDocFile(newFile);
+                         data.setEditorFileOrNull(newFile);
+                         
+                         // Comment this out to prevent deleting of the temp folder (for debugging)
+                         data.setTempDirectory(conversionResult.GetImageDir());
+                     }
+            	}
+            	catch (Exception e) {
+            		throw e;
                 }
             }
 

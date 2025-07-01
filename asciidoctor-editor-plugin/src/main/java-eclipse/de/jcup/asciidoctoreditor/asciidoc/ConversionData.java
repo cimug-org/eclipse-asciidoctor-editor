@@ -32,6 +32,7 @@ public class ConversionData {
     private boolean useHiddenFile;
     private File editorFileOrNull;
     private boolean internalPreview;
+    private String tempDirectory; // Used during latex processing, should be deleted at the end
 
     public EditorType getTargetType() {
         return targetType;
@@ -79,5 +80,13 @@ public class ConversionData {
 
     public void setInternalPreview(boolean internalPreview) {
         this.internalPreview = internalPreview;
+    }
+    
+    public String getTempDirectory() {
+        return tempDirectory;
+    }
+
+    public void setTempDirectory(String tempDirectory) {
+        this.tempDirectory = tempDirectory;
     }
 }
