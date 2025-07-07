@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+
 /**
  * Before an adoc is converted to pdf, go through each adoc and its included contents and replace all latex with svgs
  */
@@ -23,8 +25,6 @@ public class LatexPDFPreprocessor {
 	private static final String INCLUDE_PATTERN = "include::([^\\[]+?)\\[(.*?)\\]";
 	private static final String MATH_PATTERN = "stem:\\[([^\\]]+)\\]";
 	private static final String BLOCK_MATH_PATTERN = "\\[stem]\\s*\\+{4}\\s*([\\s\\S]*?)\\s*\\+{4}";
-	
-	private static final String Header_Path_Pattern = "(\\{docdir\\}/[^\\s]+)"; // Look for header 
 
 	private static final Pattern COMBINED = Pattern.compile(INCLUDE_PATTERN + 
     		"|" + MATH_PATTERN +
@@ -33,26 +33,37 @@ public class LatexPDFPreprocessor {
 	private static final String TEMP_IMAGE_DIR = "tempImageDir";
 	
 	private static Path imageDir;
+	private Path docDir;
 	private String fullPath; // adoc file to be processed
-	private LatexConversionData resultData;
+	private IProgressMonitor monitor;
 	
-	public LatexPDFPreprocessor(String file) {
-		fullPath = file;
+	public LatexPDFPreprocessor(String file, Path docDir) {
+		this.fullPath = file;
+		//this.monitor = monitor;
+		this.docDir = docDir;
 	}
 	
-	public LatexConversionData run() throws IOException, InterruptedException {
-		resultData = new LatexConversionData();
-	    Path sourceFile = Paths.get(fullPath);
-	    Path tempDir = Files.createTempDirectory(sourceFile.getParent(), "mathsvg_");
-	    String rootFile = processFile(sourceFile, tempDir, new HashSet<>(), new HashMap<>(), true);
+	public Path run() throws IOException, InterruptedException {
+		//monitor.subTask("Preprocess Latex for PDF");
+		
+		Path resultFile = null;
+		try {
+			Path sourceFile = Paths.get(fullPath);
+		    Path tempDir = Files.createTempDirectory(sourceFile.getParent(), "mathsvg_");
+		    
+		    //monitor.subTask("Converting latex to svg");
+		    String rootFile = processFile(sourceFile, tempDir, new HashSet<>(), new HashMap<>(), true);
+		    
+		    resultFile = Paths.get(rootFile);
+		}
+		catch (Exception e) {
+			AsciiDoctorEclipseLogAdapter.INSTANCE.logError("Was not able to convert latex", e);
+		}
 	    
-	    resultData.SetFile(rootFile);
-	    resultData.SetImageDir(imageDir.toString());
-	    
-	    return resultData;
+	    return resultFile;
 	}
 	
-	private static String processFile(Path sourceFile, Path tempDir, Set<Path> visited, Map<String, String> inheritedAttrs, boolean isRoot) throws IOException, InterruptedException {
+	private String processFile(Path sourceFile, Path tempDir, Set<Path> visited, Map<String, String> inheritedAttrs, boolean isRoot) throws IOException, InterruptedException {
 		Path outputFile = tempDir.resolve(sourceFile.getFileName().toString().replace(".adoc", "_processed.adoc"));
 		
 		if (visited.contains(outputFile)) 
@@ -65,10 +76,6 @@ public class LatexPDFPreprocessor {
 	    Map<String, String> localAttrs = new HashMap<>(inheritedAttrs);
 	    
 	    if (isRoot) { // Set up image directory
-	    	
-	    	// TODO: Find the config adoc file .asciidoctorconfig.adoc
-	    	// TODO: Consider when configs are not generated
-		    String configDir = sourceFile.getParent().getParent().toAbsolutePath().toString(); 
 		    
 		    Path currDir = sourceFile.getParent().toAbsolutePath(); // Actual path to current file being processed
 		    
@@ -79,8 +86,8 @@ public class LatexPDFPreprocessor {
 	    		imageDirFile.mkdirs();
 	    	}
 	    	
-	    	configDir = configDir.replace("\\", "/");
-	    	localAttrs.putIfAbsent("docdir", configDir); // built-in {docdir}
+	    	String docDirString = docDir.toString().replace("\\", "/");
+	    	localAttrs.putIfAbsent("docdir", docDirString); // built-in {docdir}
 	    }
 	    
 	    Map<String, String> attributes = parseHeaderPaths(content, localAttrs);
@@ -89,8 +96,6 @@ public class LatexPDFPreprocessor {
 	    String output = matchAndReplaceContent(content, tempDir, localAttrs, visited, isRoot);
 	    
 	    Files.writeString(outputFile, output.toString());
-	    
-	    System.out.println("Processed: " + sourceFile + " → " + outputFile);
 	    
 	    return outputFile.toString();
 	}
@@ -106,7 +111,7 @@ public class LatexPDFPreprocessor {
 	 * @throws IOException
 	 * @throws InterruptedException
 	 */
-	private static String matchAndReplaceContent(String content, Path tempDir, Map<String, String> attributes, Set<Path> visited, boolean isRoot) throws IOException, InterruptedException {
+	private String matchAndReplaceContent(String content, Path tempDir, Map<String, String> attributes, Set<Path> visited, boolean isRoot) throws IOException, InterruptedException {
 	    StringBuffer output = new StringBuffer();
 
 	    if (isRoot) {
@@ -258,7 +263,8 @@ public class LatexPDFPreprocessor {
 	    Map<String, String> attributes = new HashMap<>(existingAttributes);
 	    
 	    // TODO: Make regex more generic, look for any  attributes
-	    Pattern attrPattern = Pattern.compile("^:([^:]+):\\s*(\\{docdir}.*)$", Pattern.MULTILINE);
+	    //Pattern attrPattern = Pattern.compile("^:([^:]+):\\s*(\\{docdir}.*)$", Pattern.MULTILINE);
+	    Pattern attrPattern = Pattern.compile("^:([^:]+):\\s*(.+)$", Pattern.MULTILINE);
 	    
 	    java.util.regex.Matcher matcher = attrPattern.matcher(content);
 
@@ -311,4 +317,35 @@ public class LatexPDFPreprocessor {
 	    return result;
 	}
 
+	/**
+	 * Delete temp folder created to hold generated adocs
+	 * @param tempFilePath
+	 */
+	public static void CleanUp(Path tempFilePath) {
+        if (tempFilePath != null) {
+        	Path tempDir = tempFilePath.getParent();
+        	File directory = tempDir.toFile();
+        	
+        	if (directory.exists()) {
+        		deleteDir(directory); // Comment this out to prevent deleting of the temp folder (for debugging)
+        	}
+        }
+	}
+	
+	 /**
+     * Recursively delete all files and contents in a given directory
+     * then delete the directory itself
+     * @param file
+     */
+    private static void deleteDir(File file) {
+        File[] contents = file.listFiles();
+        if (contents != null) {
+            for (File f : contents) {
+                if (!Files.isSymbolicLink(f.toPath())) {
+                    deleteDir(f);
+                }
+            }
+        }
+        file.delete();
+    }
 }

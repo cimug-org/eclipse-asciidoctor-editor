@@ -17,6 +17,7 @@ package de.jcup.asciidoctoreditor.asciidoc;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
@@ -38,6 +39,7 @@ import de.jcup.asciidoctoreditor.AsciiDoctorEclipseLogAdapter;
 import de.jcup.asciidoctoreditor.AsciiDoctorEditor;
 import de.jcup.asciidoctoreditor.EclipseResourceHelper;
 import de.jcup.asciidoctoreditor.EditorType;
+import de.jcup.asciidoctoreditor.LatexPDFPreprocessor;
 import de.jcup.asciidoctoreditor.LogAdapter;
 import de.jcup.asciidoctoreditor.PluginContentInstaller;
 import de.jcup.asciidoctoreditor.TemporaryFileType;
@@ -169,6 +171,11 @@ public class AsciiDoctorWrapper {
      */
     public void convert(ConversionData data, AsciiDoctorBackendType asciiDoctorBackendType, AspClientProgressMonitor monitor) throws Exception {
         try {
+            File baseDir = context.getProjectBaseDir();
+            Path newFilePath  = null;
+            if (asciiDoctorBackendType == AsciiDoctorBackendType.PDF)
+            	newFilePath = preprocess(data, monitor, baseDir.toPath());
+        	
             AttributesAndOptionsParameter param = initContextAndResolveParameters(null, data, asciiDoctorBackendType);
 
             /* start conversion by asciidoctor */
@@ -176,10 +183,42 @@ public class AsciiDoctorWrapper {
             File fileToRender = context.getFileToRender();
             asciiDoctorAdapter.convertFile(data.getEditorFileOrNull(), fileToRender, param.options, param.attributes, monitor);
 
+            if (newFilePath != null)
+            	LatexPDFPreprocessor.CleanUp(newFilePath);
         } catch (Exception e) {
             logAdapter.logError("Cannot convert to html:" + data.getAsciiDocFile(), e);
             throw e;
         }
+    }
+    
+    // 
+    /**
+     * Before processing, convert all latex to svg
+     * @param data
+     * @param monitor
+     * @param baseDir
+     * @return Path to processed adoc file
+     * @throws Exception
+     */
+    private Path preprocess(ConversionData data, AspClientProgressMonitor monitor, Path baseDir) throws Exception
+    {
+    	LatexPDFPreprocessor latexPDF = new LatexPDFPreprocessor(data.getAsciiDocFile().getAbsolutePath(), baseDir);
+    	try {
+    		 Path file = latexPDF.run();
+    		
+    		 if (file != null && Files.exists(file)) {
+    			 File newFile = file.toFile();
+                 data.setAsciiDocFile(newFile);
+                 data.setEditorFileOrNull(newFile);
+                 
+                 return file;
+             }
+    	}
+    	catch (Exception e) {
+    		throw e;
+        }
+    	
+    	return null;
     }
 
     private AttributesAndOptionsParameter initContextAndResolveParameters(File configRoot, ConversionData data, AsciiDoctorBackendType asciiDoctorBackendType) throws IOException {
