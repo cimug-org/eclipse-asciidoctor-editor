@@ -91,6 +91,7 @@ public class AsciiDoctorEditorPDFLauncher {
                 AsciiDoctorEclipseLogAdapter.INSTANCE.logError("Was not able to create/show PDF", e);
             }
             monitor.done();
+            
         }
 
         private void createAndOpen(IProgressMonitor monitor, PDFSupport pdfSupport, ConversionData data) throws Exception {
@@ -123,6 +124,7 @@ public class AsciiDoctorEditorPDFLauncher {
                 return;
             }
             AsciiDoctorEditorUtil.openFileInExternalBrowser(file);
+            
         }
 
         private class PDFConvertJob extends Job {
@@ -145,6 +147,7 @@ public class AsciiDoctorEditorPDFLauncher {
                     return new Status(Status.ERROR, AsciiDoctorEditorActivator.PLUGIN_ID, "Was not able to create/show PDF", e);
                 }
             }
+            
         }
     }
 
