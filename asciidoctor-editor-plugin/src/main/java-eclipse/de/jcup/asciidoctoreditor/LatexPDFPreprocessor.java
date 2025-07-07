@@ -35,23 +35,19 @@ public class LatexPDFPreprocessor {
 	private static Path imageDir;
 	private Path docDir;
 	private String fullPath; // adoc file to be processed
-	private IProgressMonitor monitor;
 	
 	public LatexPDFPreprocessor(String file, Path docDir) {
 		this.fullPath = file;
-		//this.monitor = monitor;
 		this.docDir = docDir;
 	}
 	
 	public Path run() throws IOException, InterruptedException {
-		//monitor.subTask("Preprocess Latex for PDF");
 		
 		Path resultFile = null;
 		try {
 			Path sourceFile = Paths.get(fullPath);
 		    Path tempDir = Files.createTempDirectory(sourceFile.getParent(), "mathsvg_");
 		    
-		    //monitor.subTask("Converting latex to svg");
 		    String rootFile = processFile(sourceFile, tempDir, new HashSet<>(), new HashMap<>(), true);
 		    
 		    resultFile = Paths.get(rootFile);
