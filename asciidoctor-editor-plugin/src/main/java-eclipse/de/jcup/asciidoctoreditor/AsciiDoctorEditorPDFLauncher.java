@@ -18,7 +18,6 @@ package de.jcup.asciidoctoreditor;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -28,6 +27,8 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.ProgressMonitorDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 
+import de.jcup.asciidoctor.converter.pdf.latex.preprocessor.LatexConversionData;
+import de.jcup.asciidoctor.converter.pdf.latex.preprocessor.LatexPDFPreprocessor;
 import de.jcup.asciidoctoreditor.asciidoc.ConversionData;
 import de.jcup.asciidoctoreditor.asciidoc.PDFSupport;
 import de.jcup.asciidoctoreditor.util.AsciiDoctorEditorUtil;
@@ -183,7 +184,7 @@ public class AsciiDoctorEditorPDFLauncher {
             	LatexPDFPreprocessor latexPDF = new LatexPDFPreprocessor(data.getAsciiDocFile().getAbsolutePath());
             	try {
             		LatexConversionData conversionResult = latexPDF.run();
-            		java.nio.file.Path file = Paths.get(conversionResult.GetFile());
+            		java.nio.file.Path file = Paths.get(conversionResult.getFile());
             		
             		 if (file != null && Files.exists(file)) {
             			 File newFile = file.toFile();
@@ -191,7 +192,7 @@ public class AsciiDoctorEditorPDFLauncher {
                          data.setEditorFileOrNull(newFile);
                          
                          // Comment this out to prevent deleting of the temp folder (for debugging)
-                         data.setTempDirectory(conversionResult.GetImageDir());
+                         data.setTempDirectory(conversionResult.getImagesDir());
                      }
             	}
             	catch (Exception e) {
