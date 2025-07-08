@@ -86,7 +86,6 @@ public class NodeBinaryExtractor {
 			destExe = new File(extractedDir, EXECUTABLE_NAME + ".exe");
 		}
 
-		
 		if (!destExe.exists() || !validateSha256(destExe, shaFile)) {
 			try {
 				extractZipFromPlugin("/resources/" + archiveName, extractedDir);

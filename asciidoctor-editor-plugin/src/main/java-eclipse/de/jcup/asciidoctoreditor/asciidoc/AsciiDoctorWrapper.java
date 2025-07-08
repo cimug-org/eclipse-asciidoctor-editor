@@ -193,14 +193,14 @@ public class AsciiDoctorWrapper {
     
     /**
      * Before processing, convert all latex to svg
+     * 
      * @param data
      * @param monitor
      * @param baseDir
      * @return Path to processed adoc file
      * @throws Exception
      */
-    private Path preprocess(ConversionData data, AspClientProgressMonitor monitor, Path baseDir) throws Exception
-    {
+    private Path preprocess(ConversionData data, AspClientProgressMonitor monitor, Path baseDir) throws Exception {
         LatexPDFPreprocessor latexPDF = new LatexPDFPreprocessor(data.getAsciiDocFile().getAbsolutePath(), baseDir);
         try {
             Path file = latexPDF.run();
@@ -212,8 +212,7 @@ public class AsciiDoctorWrapper {
 
                 return file;
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw e;
         }
 

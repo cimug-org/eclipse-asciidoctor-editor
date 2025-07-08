@@ -17,7 +17,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Before an adoc is converted to pdf, go through each adoc and its included contents and replace all latex with svgs
+ * Before an adoc is converted to pdf, go through each adoc and its included
+ * contents and replace all latex with svgs
  */
 public class LatexPDFPreprocessor {
     private static final String INCLUDE_PATTERN = "include::([^\\[]+?)\\[(.*?)\\]";
@@ -25,7 +26,7 @@ public class LatexPDFPreprocessor {
     private static final String BLOCK_MATH_PATTERN = "\\[stem]\\s*\\+{4}\\s*([\\s\\S]*?)\\s*\\+{4}";
 
     private static final Pattern COMBINED = Pattern.compile(INCLUDE_PATTERN + 
-            "|" + MATH_PATTERN +
+            "|" + MATH_PATTERN + 
             "|" + BLOCK_MATH_PATTERN, Pattern.MULTILINE);
 
     private static final String TEMP_IMAGE_DIR = "tempImageDir";
@@ -49,8 +50,7 @@ public class LatexPDFPreprocessor {
 
             String rootFile = processFile(sourceFile, tempDir, new HashSet<>(), new HashMap<>(), true);
             resultFile = Paths.get(rootFile);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
@@ -58,7 +58,9 @@ public class LatexPDFPreprocessor {
     }
 
     /**
-     * Recursively process each adoc file, generate SVG for each latex, and replace include and stem statements with calls to their processed files
+     * Recursively process each adoc file, generate SVG for each latex, and replace
+     * include and stem statements with calls to their processed files
+     * 
      * @param sourceFile
      * @param tempDir
      * @param visited
@@ -68,10 +70,11 @@ public class LatexPDFPreprocessor {
      * @throws IOException
      * @throws InterruptedException
      */
-    private String processFile(Path sourceFile, Path tempDir, Set<Path> visited, Map<String, String> inheritedAttrs, boolean isRoot) throws IOException, InterruptedException {
+    private String processFile(Path sourceFile, Path tempDir, Set<Path> visited, Map<String, String> inheritedAttrs,
+            boolean isRoot) throws IOException, InterruptedException {
         Path outputFile = tempDir.resolve(sourceFile.getFileName().toString().replace(".adoc", "_processed.adoc"));
 
-        if (visited.contains(outputFile)) 
+        if (visited.contains(outputFile))
             return outputFile.toString();
         visited.add(outputFile);
 
@@ -86,7 +89,7 @@ public class LatexPDFPreprocessor {
             imageDir = currDir.resolve("Images/Latex");
 
             File imageDirFile = imageDir.toFile();
-            if (!imageDirFile.exists()){
+            if (!imageDirFile.exists()) {
                 imageDirFile.mkdirs();
             }
 
@@ -104,7 +107,9 @@ public class LatexPDFPreprocessor {
     }
 
     /**
-     * Use Regex to parse and replace file contents with references to converted latex and include files
+     * Use Regex to parse and replace file contents with references to converted
+     * latex and include files
+     * 
      * @param content
      * @param tempDir
      * @param attributes
@@ -114,7 +119,8 @@ public class LatexPDFPreprocessor {
      * @throws IOException
      * @throws InterruptedException
      */
-    private String matchAndReplaceContent(String content, Path tempDir, Map<String, String> attributes, Set<Path> visited, boolean isRoot) throws IOException, InterruptedException {
+    private String matchAndReplaceContent(String content, Path tempDir, Map<String, String> attributes,
+            Set<Path> visited, boolean isRoot) throws IOException, InterruptedException {
         StringBuffer output = new StringBuffer();
 
         if (isRoot) {
@@ -148,17 +154,14 @@ public class LatexPDFPreprocessor {
                         newFile = newFile.toString().replace("\\", "/");
 
                         output.append("include::").append(newFile).append("[").append(includeOptions).append("]");
-                    }
-                    else {
+                    } else {
                         String pathDisplay = included.toString().replace("\\", "/");
                         output.append("include::").append(pathDisplay).append("[").append(includeOptions).append("]");
                     }
-                } 
-                else {
+                } else {
                     output.append("include::").append(includePathRaw).append("[").append(includeOptions).append("]");
                 }
-            } 
-            else if (matcher.group(3) != null) { // Match inline latex
+            } else if (matcher.group(3) != null) { // Match inline latex
                 // stem:[latex] text
                 String latex = matcher.group(3).trim();
 
@@ -172,8 +175,7 @@ public class LatexPDFPreprocessor {
                 String pathOutput = "{" + TEMP_IMAGE_DIR + "}/" + svgName;
 
                 output.append("image:").append(pathOutput).append("[fit=line]");
-            } 
-            else if (matcher.group(4) != null) { // Match block latex
+            } else if (matcher.group(4) != null) { // Match block latex
                 // [stem]++++...++++
                 String blockLatex = matcher.group(4).trim();
 
@@ -199,6 +201,7 @@ public class LatexPDFPreprocessor {
 
     /**
      * Calls MathJax to convert given latex to an svg file
+     * 
      * @param latex
      * @param outputSvg
      * @throws IOException
@@ -209,7 +212,8 @@ public class LatexPDFPreprocessor {
             if (nodeEXE == null)
                 throw new RuntimeException("Latex to SVG: Failed to find required resources");
 
-            ProcessBuilder pb = new ProcessBuilder(NodeBinaryExtractor.EXECUTABLE_NAME, NodeBinaryExtractor.SCRIPT_NAME, latex);
+            ProcessBuilder pb = new ProcessBuilder(NodeBinaryExtractor.EXECUTABLE_NAME, NodeBinaryExtractor.SCRIPT_NAME,
+                    latex);
             pb.directory(new File(nodeEXE.getParent().toString()));
 
             pb.redirectOutput(outputSvg.toFile());
@@ -217,16 +221,14 @@ public class LatexPDFPreprocessor {
             Process process = pb.start();
 
             String line;
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
 
                 while ((line = reader.readLine()) != null) {
                     System.err.println("Output: " + line);
                 }
             }
 
-            try (BufferedReader errorReader = new BufferedReader(
-                    new InputStreamReader(process.getErrorStream()))) {
+            try (BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
 
                 while ((line = errorReader.readLine()) != null) {
                     System.err.println("ERROR: " + line);
@@ -240,14 +242,14 @@ public class LatexPDFPreprocessor {
             }
 
             stripMjxFromSVG(outputSvg);
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     /**
      * Remove HTML nodes generated by MathJax
+     * 
      * @param filePath
      * @throws IOException
      */
@@ -264,9 +266,12 @@ public class LatexPDFPreprocessor {
     }
 
     /**
-     * Get all path attributes, convert them into absolute paths, and add them to attribute dictionary
-     * @param content file contents
-     * @param existingAttributes dictionary of attributes often inherited from another file that uses includes
+     * Get all path attributes, convert them into absolute paths, and add them to
+     * attribute dictionary
+     * 
+     * @param content            file contents
+     * @param existingAttributes dictionary of attributes often inherited from
+     *                           another file that uses includes
      * @return dictionary of all existing and new attributes
      */
     private static Map<String, String> parseHeaderPaths(String content, Map<String, String> existingAttributes) {
@@ -300,9 +305,11 @@ public class LatexPDFPreprocessor {
     }
 
     /**
-     * Takes a relative include path and uses the attributes to create an absolute path
+     * Takes a relative include path and uses the attributes to create an absolute
+     * path
+     * 
      * @param includeText the include path to be processed
-     * @param attributes dictionary of directory attributes from the header
+     * @param attributes  dictionary of directory attributes from the header
      * @return absolute path
      */
     private static String getAbsoluteIncludePaths(String includeText, Map<String, String> attributes) {
@@ -325,6 +332,7 @@ public class LatexPDFPreprocessor {
 
     /**
      * Delete temp folder created to hold generated adocs
+     * 
      * @param tempFilePath
      */
     public static void cleanUp(Path tempFilePath) {
@@ -339,8 +347,9 @@ public class LatexPDFPreprocessor {
     }
 
     /**
-     * Recursively delete all files and contents in a given directory
-     * then delete the directory itself
+     * Recursively delete all files and contents in a given directory then delete
+     * the directory itself
+     * 
      * @param file
      */
     private static void deleteDir(File file) {
