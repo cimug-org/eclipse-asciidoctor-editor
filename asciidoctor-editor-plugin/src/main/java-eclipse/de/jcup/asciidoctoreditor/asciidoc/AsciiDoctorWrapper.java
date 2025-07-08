@@ -174,7 +174,7 @@ public class AsciiDoctorWrapper {
             File baseDir = context.getProjectBaseDir();
             Path newFilePath  = null;
             if (asciiDoctorBackendType == AsciiDoctorBackendType.PDF)
-            	newFilePath = preprocess(data, monitor, baseDir.toPath());
+                newFilePath = preprocess(data, monitor, baseDir.toPath());
         	
             AttributesAndOptionsParameter param = initContextAndResolveParameters(null, data, asciiDoctorBackendType);
 
@@ -184,14 +184,13 @@ public class AsciiDoctorWrapper {
             asciiDoctorAdapter.convertFile(data.getEditorFileOrNull(), fileToRender, param.options, param.attributes, monitor);
 
             if (newFilePath != null)
-            	LatexPDFPreprocessor.CleanUp(newFilePath);
+                LatexPDFPreprocessor.cleanUp(newFilePath);
         } catch (Exception e) {
             logAdapter.logError("Cannot convert to html:" + data.getAsciiDocFile(), e);
             throw e;
         }
     }
     
-    // 
     /**
      * Before processing, convert all latex to svg
      * @param data
@@ -202,23 +201,23 @@ public class AsciiDoctorWrapper {
      */
     private Path preprocess(ConversionData data, AspClientProgressMonitor monitor, Path baseDir) throws Exception
     {
-    	LatexPDFPreprocessor latexPDF = new LatexPDFPreprocessor(data.getAsciiDocFile().getAbsolutePath(), baseDir);
-    	try {
-    		 Path file = latexPDF.run();
-    		
-    		 if (file != null && Files.exists(file)) {
-    			 File newFile = file.toFile();
-                 data.setAsciiDocFile(newFile);
-                 data.setEditorFileOrNull(newFile);
-                 
-                 return file;
-             }
-    	}
-    	catch (Exception e) {
-    		throw e;
+        LatexPDFPreprocessor latexPDF = new LatexPDFPreprocessor(data.getAsciiDocFile().getAbsolutePath(), baseDir);
+        try {
+            Path file = latexPDF.run();
+
+            if (file != null && Files.exists(file)) {
+                File newFile = file.toFile();
+                data.setAsciiDocFile(newFile);
+                data.setEditorFileOrNull(newFile);
+
+                return file;
+            }
         }
-    	
-    	return null;
+        catch (Exception e) {
+            throw e;
+        }
+
+        return null;
     }
 
     private AttributesAndOptionsParameter initContextAndResolveParameters(File configRoot, ConversionData data, AsciiDoctorBackendType asciiDoctorBackendType) throws IOException {
