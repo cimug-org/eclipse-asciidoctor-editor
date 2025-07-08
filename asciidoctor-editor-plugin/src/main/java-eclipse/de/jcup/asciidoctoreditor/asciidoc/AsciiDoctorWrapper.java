@@ -35,11 +35,11 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.ui.IEditorInput;
 
+import de.jcup.asciidoctor.converter.pdf.latex.preprocessor.LatexPDFPreprocessor;
 import de.jcup.asciidoctoreditor.AsciiDoctorEclipseLogAdapter;
 import de.jcup.asciidoctoreditor.AsciiDoctorEditor;
 import de.jcup.asciidoctoreditor.EclipseResourceHelper;
 import de.jcup.asciidoctoreditor.EditorType;
-import de.jcup.asciidoctoreditor.LatexPDFPreprocessor;
 import de.jcup.asciidoctoreditor.LogAdapter;
 import de.jcup.asciidoctoreditor.PluginContentInstaller;
 import de.jcup.asciidoctoreditor.TemporaryFileType;
