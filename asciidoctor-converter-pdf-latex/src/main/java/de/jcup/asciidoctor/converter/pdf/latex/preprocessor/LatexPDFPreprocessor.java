@@ -50,7 +50,8 @@ public class LatexPDFPreprocessor {
 
             String rootFile = processFile(sourceFile, tempDir, new HashSet<>(), new HashMap<>(), true);
             resultFile = Paths.get(rootFile);
-        } catch (Exception e) {
+        } 
+        catch (Exception e) {
             throw new RuntimeException(e);
         }
 
@@ -242,7 +243,8 @@ public class LatexPDFPreprocessor {
             }
 
             stripMjxFromSVG(outputSvg);
-        } catch (IOException e) {
+        } 
+        catch (IOException e) {
             e.printStackTrace();
         }
     }

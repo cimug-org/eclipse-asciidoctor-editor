@@ -212,7 +212,8 @@ public class AsciiDoctorWrapper {
 
                 return file;
             }
-        } catch (Exception e) {
+        } 
+        catch (Exception e) {
             throw e;
         }
 
