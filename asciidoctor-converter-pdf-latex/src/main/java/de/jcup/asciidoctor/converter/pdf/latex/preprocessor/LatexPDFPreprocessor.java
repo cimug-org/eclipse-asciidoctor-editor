@@ -16,6 +16,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.NullProgressMonitor;
+
 /**
  * Before an adoc is converted to pdf, go through each adoc and its included
  * contents and replace all latex with svgs
@@ -29,12 +36,13 @@ public class LatexPDFPreprocessor {
             "|" + MATH_PATTERN + 
             "|" + BLOCK_MATH_PATTERN, Pattern.MULTILINE);
 
-    private static final String TEMP_IMAGE_DIR = "tempImageDir";
+    private static final String IMAGE_ATTRIBUTE_NAME = "tempImageDir";
 
-    private static Path imageDir;
+    private Path imageDir; // Path to where latex svgs are stored
     private Path docDir;
     private String asciiDocFullFilePath; // adoc file to be processed
-    private File nodeEXE;
+    private File nodeEXE; // NodeJS used to run latex to svg script
+    private boolean filesUpdated = false;
 
     public LatexPDFPreprocessor(String file, Path docDir) {
         this.asciiDocFullFilePath = file;
@@ -50,8 +58,31 @@ public class LatexPDFPreprocessor {
 
             String rootFile = processFile(sourceFile, tempDir, new HashSet<>(), new HashMap<>(), true);
             resultFile = Paths.get(rootFile);
-        } 
-        catch (Exception e) {
+
+            if (filesUpdated) { // Only refresh if needed
+                IProject[] projects = ResourcesPlugin.getWorkspace().getRoot().getProjects();
+                for (IProject project : projects) {
+                    if (project.isOpen()) {
+                        try {
+                            Path base = Paths.get(project.getLocationURI());
+                            Path target = imageDir.getParent();
+                            if (target.toString().contains(base.toString())) {
+                                Path relative = base.relativize(target);
+
+                                IPath eclipseRelativePath = convertToIPath(relative);
+
+                                IFolder latexFolder = project.getFolder(eclipseRelativePath);
+
+                                latexFolder.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor());
+                                break;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
@@ -92,6 +123,7 @@ public class LatexPDFPreprocessor {
             File imageDirFile = imageDir.toFile();
             if (!imageDirFile.exists()) {
                 imageDirFile.mkdirs();
+                filesUpdated = true;
             }
 
             String docDirString = docDir.toString().replace("\\", "/");
@@ -132,7 +164,7 @@ public class LatexPDFPreprocessor {
             if (!docDir.isBlank()) {
                 relativeImageDir = relativeImageDir.replace(docDir, "{docdir}");
             }
-            output.append(":" + TEMP_IMAGE_DIR + ": " + relativeImageDir + System.lineSeparator());
+            output.append(":" + IMAGE_ATTRIBUTE_NAME + ": " + relativeImageDir + System.lineSeparator());
         }
 
         java.util.regex.Matcher matcher = COMBINED.matcher(content);
@@ -167,13 +199,14 @@ public class LatexPDFPreprocessor {
                 String latex = matcher.group(3).trim();
 
                 String svgName = latex.hashCode() + ".svg";
-                Path svgFile = imageDir.resolve(svgName);
+                Path svgFilePath = imageDir.resolve(svgName);
 
-                if (!Files.exists(svgFile)) {
-                    generateSvgFromLatex(latex, svgFile);
+                // If file doesn't exist or cached file was in error state, run latex to svg
+                if (!Files.exists(svgFilePath) || svgFilePath.toFile().length() == 0) {
+                    generateSvgFromLatex(latex, svgFilePath);
                 }
 
-                String pathOutput = "{" + TEMP_IMAGE_DIR + "}/" + svgName;
+                String pathOutput = "{" + IMAGE_ATTRIBUTE_NAME + "}/" + svgName;
 
                 output.append("image:").append(pathOutput).append("[fit=line]");
             } else if (matcher.group(4) != null) { // Match block latex
@@ -181,13 +214,13 @@ public class LatexPDFPreprocessor {
                 String blockLatex = matcher.group(4).trim();
 
                 String svgName = blockLatex.hashCode() + ".svg";
-                Path svgFile = imageDir.resolve(svgName);
+                Path svgFilePath = imageDir.resolve(svgName);
 
-                if (!Files.exists(svgFile)) {
-                    generateSvgFromLatex(blockLatex, svgFile);
+                if (!Files.exists(svgFilePath) || svgFilePath.toFile().length() == 0) {
+                    generateSvgFromLatex(blockLatex, svgFilePath);
                 }
 
-                String pathOutput = "{" + TEMP_IMAGE_DIR + "}/" + svgName;
+                String pathOutput = "{" + IMAGE_ATTRIBUTE_NAME + "}/" + svgName;
 
                 output.append("image::").append(pathOutput).append("[pdfwidth=25%, align=center]");
             }
@@ -213,8 +246,7 @@ public class LatexPDFPreprocessor {
             if (nodeEXE == null)
                 throw new RuntimeException("Latex to SVG: Failed to find required resources");
 
-            ProcessBuilder pb = new ProcessBuilder(NodeBinaryExtractor.EXECUTABLE_NAME, NodeBinaryExtractor.SCRIPT_NAME,
-                    latex);
+            ProcessBuilder pb = new ProcessBuilder(nodeEXE.toString(), NodeBinaryExtractor.SCRIPT_NAME, latex);
             pb.directory(new File(nodeEXE.getParent().toString()));
 
             pb.redirectOutput(outputSvg.toFile());
@@ -243,8 +275,8 @@ public class LatexPDFPreprocessor {
             }
 
             stripMjxFromSVG(outputSvg);
-        } 
-        catch (IOException e) {
+            filesUpdated = true;
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -364,5 +396,9 @@ public class LatexPDFPreprocessor {
             }
         }
         file.delete();
+    }
+
+    public static IPath convertToIPath(Path givenPath) {
+        return new org.eclipse.core.runtime.Path(givenPath.toString());
     }
 }

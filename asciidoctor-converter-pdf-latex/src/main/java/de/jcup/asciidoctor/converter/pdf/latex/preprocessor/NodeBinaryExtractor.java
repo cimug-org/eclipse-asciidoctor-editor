@@ -14,8 +14,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.IPath;
@@ -94,9 +92,10 @@ public class NodeBinaryExtractor {
 			}
 		}
 		
-		File destScript = new File(destExe, SCRIPT_NAME);
+		File destScript = new File(destExe.getParentFile(), SCRIPT_NAME);
+		String scriptSHAFile = "/resources/sha256/" + SCRIPT_NAME + ".sha256";
 		
-		if (!destScript.exists() || !validateSha256(destScript, shaFile)) {
+		if (!destScript.exists() || !validateSha256(destScript, scriptSHAFile)) {
 			try {
 				extractScriptFromPlugin("/resources/" + SCRIPT_NAME, destExe.getParentFile());
 			} catch (IOException | URISyntaxException e) {
@@ -179,7 +178,14 @@ public class NodeBinaryExtractor {
 			while ((read = in.read(buffer)) > 0) {
 				digest.update(buffer, 0, read);
 			}
-			return Stream.of(digest.digest()).map(b -> String.format("%02x", b)).collect(Collectors.joining());
+
+	        byte[] hashBytes = digest.digest();
+	        StringBuilder hexString = new StringBuilder();
+	        for (byte b : hashBytes) {
+	            hexString.append(String.format("%02x", b));
+	        }
+	        
+	        return hexString.toString();
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException("SHA-256 not supported", e);
 		}
