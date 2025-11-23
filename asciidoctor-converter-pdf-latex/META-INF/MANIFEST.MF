@@ -1,0 +1,15 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Asciidoctor LaTeX Converter for PDF
+Bundle-SymbolicName: de.jcup.asciidoctor.converter.pdf.latex;singleton:=true
+Bundle-Version: 1.1.0
+Export-Package: de.jcup.asciidoctor.converter.pdf.latex.preprocessor
+Bundle-Activator: de.jcup.asciidoctor.converter.pdf.latex.Activator
+Bundle-ClassPath: resources/,
+ .
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Automatic-Module-Name: de.jcup.asciidoctor.converter.pdf.latex
+Bundle-ActivationPolicy: lazy
+Import-Package: org.eclipse.core.resources

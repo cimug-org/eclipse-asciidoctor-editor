@@ -1,0 +1,1 @@
+Mac is not yet supported by the "infrastructure and packaging" is in place in the event we do.
